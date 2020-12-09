@@ -93,30 +93,36 @@ void setup() {
   
   Serial.println();
 
+//***Zählen der Boot-Vorgänge**********************************************************************
    ++bootCount;                                           //Was bedeuten die beiden ++ vor boot Count
   Serial.println("Boot number: " + String(bootCount));    //Ausgabe der Anzahl der Boot-Vorgänge
+//******************************************************************************************************
 
-  //Print the wakeup reason for ESP32
+//Print the wakeup reason for ESP32********************************************************************
   print_wakeup_reason();                                  //Ausgabe des Wake up Grundes
-
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+//*****************************************************************************************************
+  
+//***Ausgabe Serieller Monitor Time to Sleep********************************************************
   Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
   " Minute");
   
+//***Definieren der Pins Ultraschallsensor am ESP32*****************************************************************  
   pinMode(triggerPin, OUTPUT);                // Trigger Pin als Ausgang definieren
   pinMode(echoPin, INPUT);                    // Echo Pin als Eingang defnieren
-  
+//*****************************************************************************************************************  
 
-  // Add tags
+//***Add tags für INFLUXDB**************************************************************************
   sensor.addTag("device", DEVICE);
   sensor.addTag("SSID", WiFi.SSID());
+//**************************************************************************************************
+  
+  
+//*** Accurate time is necessary for certificate validation and writing in batches*********
+    timeSync(TZ_INFO, "pool.ntp.org", "time.nis.gov");
+  
+//****************************************************************************************
 
-  // Accurate time is necessary for certificate validation and writing in batches
-  // For the fastest time sync find NTP servers in your area: https://www.pool.ntp.org/zone/
-  // Syncing progress and the time will be printed to Serial.
-  timeSync(TZ_INFO, "pool.ntp.org", "time.nis.gov");
-
-  // Check server connection
+//***Check server connection**************************************************************
   if (client.validateConnection()) {
     Serial.print("Connected to InfluxDB: ");
     Serial.println(client.getServerUrl());
@@ -124,9 +130,10 @@ void setup() {
     Serial.print("InfluxDB connection failed: ");
     Serial.println(client.getLastErrorMessage());
   }
-
+*******************************************************************************************
   
- digitalWrite(triggerPin, LOW);              
+//***Messung der Entfernung über Ultraschall***********************************************
+  digitalWrite(triggerPin, LOW);              
     delay(5);                                // 5 Millisekunden warten
     digitalWrite(triggerPin, HIGH);             // Den Trigger auf HIGH setzen um eine 
                                              // Ultraschallwelle zu senden
@@ -139,37 +146,41 @@ void setup() {
  
         Serial.print(entfernung);            // Den Weg in Zentimeter ausgeben
         Serial.println(" cm");               //
+//*****************************************************************************************
 
+  sensor.clearFields(); // ???
 
-  sensor.clearFields();
-
-  // Store measured value into point
+//*** Store measured value into point******************************************************
   // Report RSSI of currently connected network
   sensor.addField("Fuellstand", entfernung); //_field
-  
+//*****************************************************************************************  
 
-  // Print what are we exactly writing
+//***Ausgabe Serieller Monitor Print what are we exactly writing***************************
   Serial.print("Writing: ");
   Serial.println(sensor.toLineProtocol());
 
-  // If no Wifi signal, try to reconnect it
+//*** If no Wifi signal, try to reconnect it***********************************************
   if ((WiFi.RSSI() == 0) && (wifiMulti.run() != WL_CONNECTED)) {
     Serial.println("Wifi connection lost");
   }
 
-  // Write point
+//*** Write point ***************************************************************************
   if (!client.writePoint(sensor)) {
     Serial.print("InfluxDB write failed: ");
     Serial.println(client.getLastErrorMessage());
   }
-Serial.println("Going to sleep now");
- 
-  WiFi.mode(WIFI_OFF);
-
-  Serial.flush(); 
   
-  esp_deep_sleep_start();
+ 
+Serial.println("Going to sleep now"); //Ausgabe Serieller Monitor
+ 
+  WiFi.mode(WIFI_OFF); //WIFI auschalten
 
+  Serial.flush();  //???
+  
+//***deep sleep****************************************************************  
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR); //deep sleep dauer
+  esp_deep_sleep_start();       //deep sleep
+//**********************************************************************************
 }
 
 void loop(){
