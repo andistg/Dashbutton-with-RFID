@@ -1,3 +1,6 @@
+//Daten mit einem ESP32 und einem Sensor über WLAN an InfluxDB senden und ESP über Wake up Timer in Deep Sleep zu schicken.
+
+//****Einbindung der Bibliotheken je nach Board***************************
 #if defined(ESP32)
 #include <WiFiMulti.h>
 WiFiMulti wifiMulti;
@@ -7,24 +10,33 @@ WiFiMulti wifiMulti;
 ESP8266WiFiMulti wifiMulti;
 #define DEVICE "ESP8266"
 #endif
+//************************************************************************
 
-
+//***Einbindung INFLUXDB**********************
 #include <InfluxDbClient.h>
 #include <InfluxDbCloud.h>
+//*******************************************
 
-int triggerPin = 12;                               // Der Trigger Pin
-int echoPin = 14;                                  // Der Echo Pin
+//***PINS und Variablen Ultraschall***********
+int triggerPin = 12;                         // Der Trigger Pin
+int echoPin = 14;                            // Der Echo Pin
 long dauer=0;                                // Hier wird die Zeitdauer abgespeichert
                                              // die die Ultraschallwelle braucht
                                              // um zum Sensor zurückzukommen
 long entfernung=0;                           // Hier wird die Entfernung vom 
                                              // Hindernis abgespeichert
+//********************************************
 
-#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP 1800 /* Time ESP32 will go to sleep (in seconds) */
+//***Variable für Deep Sleep*******************
+#define uS_TO_S_FACTOR 1000000                // Conversion factor for micro seconds to seconds
+#define TIME_TO_SLEEP 1800                    //Time ESP32 will go to sleep (in seconds)
+//*********************************************
 
-RTC_DATA_ATTR int bootCount = 0;
+//***Variable RTC Süeicher für Deep Slee p*******************
+RTC_DATA_ATTR int bootCount = 0;              //Anzahl wie oft das Board aufgewacht ist
+//*********************************************
 
+//***Funkton für die Auswertung des wake up*******
 void print_wakeup_reason(){
   esp_sleep_wakeup_cause_t wakeup_reason;
 
@@ -36,8 +48,10 @@ void print_wakeup_reason(){
       default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
   }
 }
+//*********************************************
 
 
+//***Definieren des Wlan´s und der Datenbank*******************************
 // WiFi AP SSID
 #define WIFI_SSID "ASD100"
 // WiFi password
@@ -50,44 +64,47 @@ void print_wakeup_reason(){
 #define INFLUXDB_ORG "andreas.a.schnabel@gmail.com"
 // InfluxDB v2 bucket name (Use: InfluxDB UI ->  Data -> Buckets)
 #define INFLUXDB_BUCKET "Messwerte BME280"
-
+//Zeitzone
 #define TZ_INFO "CET-1CEST,M3.5.0,M10.5.0/3"
+//***************************************************************************
 
+//***Anmelden INFLUXDB********************************************************
 // InfluxDB client instance with preconfigured InfluxCloud certificate
 InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKEN, InfluxDbCloud2CACert);
-
 // Data point
 Point sensor("Smart Waste"); //_measurement
+//****************************************************************************
 
+
+//***Setup********************************************************************
 void setup() {
   Serial.begin(115200);
   delay(200);
+//***WLAN-Setup****************************************************************
+  WiFi.mode(WIFI_STA);                      //Board als Station definieren
+  wifiMulti.addAP(WIFI_SSID, WIFI_PASSWORD); //über wifimulti können mehrere wlan angegegeben werden. in diesem fall über oben definierte Variablen
 
-  WiFi.mode(WIFI_STA);
-  wifiMulti.addAP(WIFI_SSID, WIFI_PASSWORD);
-
-  Serial.print("Connecting to wifi");
+  Serial.print("Connecting to wifi");       //Zeigt im serial-monitor den aufbau der Verbindung an und druckt solange alle 0,1 Sekunden eine punkt
   while (wifiMulti.run() != WL_CONNECTED) {
-    Serial.print(".");
+    Serial.print(".");                      //Punkt ausgeben
     delay(100);
   }
+ //*****************************************************************************
+  
   Serial.println();
 
-   ++bootCount;
-  Serial.println("Boot number: " + String(bootCount));
+   ++bootCount;                                           //Was bedeuten die beiden ++ vor boot Count
+  Serial.println("Boot number: " + String(bootCount));    //Ausgabe der Anzahl der Boot-Vorgänge
 
   //Print the wakeup reason for ESP32
-  print_wakeup_reason();
+  print_wakeup_reason();                                  //Ausgabe des Wake up Grundes
 
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
   Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
   " Minute");
   
   pinMode(triggerPin, OUTPUT);                // Trigger Pin als Ausgang definieren
-    pinMode(echoPin, INPUT);                    // Echo Pin als Eingang defnieren
-  
-
-  // Setup wifi
+  pinMode(echoPin, INPUT);                    // Echo Pin als Eingang defnieren
   
 
   // Add tags
@@ -108,6 +125,7 @@ void setup() {
     Serial.println(client.getLastErrorMessage());
   }
 
+  
  digitalWrite(triggerPin, LOW);              
     delay(5);                                // 5 Millisekunden warten
     digitalWrite(triggerPin, HIGH);             // Den Trigger auf HIGH setzen um eine 
