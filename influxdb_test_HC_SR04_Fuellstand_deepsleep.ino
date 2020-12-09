@@ -53,9 +53,9 @@ void print_wakeup_reason(){
 
 //***Definieren des Wlan´s und der Datenbank*******************************
 // WiFi AP SSID
-#define WIFI_SSID "ASD100"
+#define WIFI_SSID "xxxxxx"
 // WiFi password
-#define WIFI_PASSWORD "schnabel1234"
+#define WIFI_PASSWORD "xxxxxxxxxx"
 // InfluxDB v2 server url, e.g. https://eu-central-1-1.aws.cloud2.influxdata.com (Use: InfluxDB UI -> Load Data -> Client Libraries)
 #define INFLUXDB_URL "https://us-central1-1.gcp.cloud2.influxdata.com"
 // InfluxDB v2 server or cloud API authentication token (Use: InfluxDB UI -> Data -> Tokens -> <select token>)
